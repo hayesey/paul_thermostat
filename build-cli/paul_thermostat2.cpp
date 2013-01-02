@@ -66,11 +66,6 @@ void setup()
 void loop()
 {
 
-/* 
-  Need to reopen the serial somehow if it's closed
-  Seems to close/stop working when python opens it and 
-  you kill python
-*/
 
   readSerial();
   measuredTemp = readTemp();
