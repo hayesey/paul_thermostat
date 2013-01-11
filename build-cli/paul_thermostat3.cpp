@@ -182,21 +182,31 @@ void serialEvent() {
   // try and read 12 bytes, give up after one second
   // presumably dont need serial.available in this function
   int byteCount = Serial.readBytes(llapMsg, 12);
+  //Serial.print("bytecount ");
+  //Serial.print(byteCount);
+  //Serial.print("\r\n");
   if (byteCount < 12) {
     // then not enough data was received
+    //Serial.print("not enough data\r\n");
     return;      	
   }
   // make sure it's null terminated
   llapMsg[12] = '\0';
 
-  if (llapMsg[0] == 'a') {
+  //Serial.print("llapmsg ");
+  //Serial.print(llapMsg);
+  //Serial.print("\r\n");
+
+  if (llapMsg[0] != 'a') {
     // not a valid llap message
+    //Serial.print("no a at start\r\n");
     return;
   }
   // now decode the message
   char msgId[] = {llapMsg[1], llapMsg[2], '\0'};
   if (strcmp(msgId, llapId) != 0) {
     // message isn't for us
+    //Serial.print("not for us\r\n");
     return;
   }
   char msg[9];
@@ -214,14 +224,20 @@ void serialEvent() {
   else if (strstr(msg, "TTMP")) {
     // set or reply with target temp
     char msgTail[6] = {msg[4], msg[5], msg[6], msg[7], msg[8], '\0'};
-    if (strcmp(msgTail, "-----")) {
+    if (strstr(msgTail, "-----")) {
       // return the target temp
       Serial.print("aTSTTMP");
       Serial.print(setTemp);
     }
     else {
       // set the target temp
-      sscanf(msgTail, "%f", &setTemp);
+      //sscanf(msgTail, "%f", &setTemp);
+      float tempTemp = atof(msgTail);
+      // make sure what we end up with is sensible or ignore it
+      // atof should return a 0 if the input was invalid
+      if ((tempTemp > 2.0) && (tempTemp < 30.0)) {
+      	 setTemp = tempTemp;
+      }
       Serial.print("aTSTTMP");
       Serial.print(setTemp);
     }
@@ -229,13 +245,13 @@ void serialEvent() {
   else if (strstr(msg, "STAT")) {
     // set state or reply with state
     char msgTail[6] = {msg[4], msg[5], msg[6], msg[7], msg[8], '\0'};
-    if (strcmp(msgTail, "-----")) {
+    if (strstr(msgTail, "-----")) {
       // return the state of the thermostat
       Serial.print("aTSSTAT");
       if (is_off) {
 	Serial.print(0);
       } 
-      else {
+      else if (!is_off) {
 	Serial.print(1);
       }
       Serial.print("----");
@@ -254,10 +270,10 @@ void serialEvent() {
   else if (strstr(msg, "RELA-----")) {
     // reply with relay state
     Serial.print("aTSRELA");
-    if (heatingOn = true) {
+    if (heatingOn) {
       Serial.print("1----");
     }
-    else {
+    else if (!heatingOn) {
       Serial.print("0----");
     }
   }
