@@ -217,8 +217,14 @@ void serialEvent() {
   // whenever sending an llap message we much ensure it is always exactly 12 bytes
   if (strstr(msg, "RTMP-----")) {
     // reply with the temp
-    char buffer[10];
+    char buffer[10] = "000000000";
     ftoa(buffer, measuredTemp, 2);
+    //int lencheck = 5 - strlen(buffer);
+    //if (lencheck > 0) {
+    //for (int i=0; i<lencheck; i++) {
+    //buffer[5-i] = "0";
+    //}
+    //}
     buffer[5] = '\0';    
     Serial.print("aTSRTMP");
     Serial.print(buffer);
