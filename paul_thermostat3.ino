@@ -206,7 +206,8 @@ void serialEvent() {
   char msgId[] = {llapMsg[1], llapMsg[2], '\0'};
   if (strcmp(msgId, llapId) != 0) {
     // message isn't for us
-    //Serial.print("not for us\r\n");
+    Serial.print(msgId);
+    Serial.print(" not for us\r\n");
     return;
   }
   char msg[9];
