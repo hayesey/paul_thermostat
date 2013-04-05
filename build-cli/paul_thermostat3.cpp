@@ -46,7 +46,7 @@ void updateDisplay();
 float adjustUnits(float temp);
 void readLlap();
 void readSerial();
-char *ftoa(char *a, double f, int precision);
+void ftoa(char fstr[80], float num);
 
 void setup() {
   lcd.begin(2, 20);
@@ -217,11 +217,11 @@ void serialEvent() {
   for (int i=0; i<9; i++) {
     msg[i] = llapMsg[i+3];
   }
-  // whenever sending an llap message we much ensure it is always exactly 12 bytes
+  // whenever sending an llap message we must ensure it is always exactly 12 bytes
   if (strstr(msg, "RTMP-----")) {
     // reply with the temp
-    char buffer[10] = "000000000";
-    ftoa(buffer, measuredTemp, 2);
+    char buffer[10];
+    ftoa(buffer, measuredTemp);
     strcat(buffer, "----");
     buffer[5] = '\0';    
     Serial.print("aTSRTMP");
@@ -285,18 +285,20 @@ void serialEvent() {
   }
 }
 
-char *ftoa(char *a, double f, int precision)
-{
-  long p[] = {0,10,100,1000,10000,100000,1000000,10000000,100000000};
-  char *ret = a;
-  long heiltal = (long)f;
-  itoa(heiltal, a, 10);
-  while (*a != '\0') a++;
-  *a++ = '.';
-  // .00 seems to reduce the answer by one!  Add some random amount after the decimal
-  // point to bodge it
-  long desimal = abs((long)(((f - heiltal) * p[precision]) + 0.78));
-  itoa(desimal, a, 10);
-  return ret;
+void ftoa(char fstr[80], float num) {
+  int m = log10(num);
+  int digit;
+  float tolerance = .0001f;
+
+  while (num > 0 + tolerance) {
+    float weight = pow(10.0f, m);
+    digit = floor(num / weight);
+    num -= (digit*weight);
+    *(fstr++)= '0' + digit;
+    if (m == 0)
+      *(fstr++) = '.';
+    m--;
+  }
+  *(fstr) = '\0';
 }
 
