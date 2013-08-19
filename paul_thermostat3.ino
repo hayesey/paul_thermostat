@@ -31,8 +31,8 @@ int i = 0;
 float setTemp = 20.0;
 float measuredTemp;
 char mode = 'C';        // can be changed to F 
-boolean is_off = false;
-boolean heatingOn = false;
+boolean is_off = true;  // whether the thermostat is set to on or off
+boolean heatingOn = false; // boiler demand 
 boolean ended = false;
 float hysteresis = 0.25;
 
