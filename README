@@ -2,7 +2,7 @@ paul_thermostat
 -----
 
 2014-01-28 Paul Hayes
-
+2016-11-17 Updated
 -----
 
 This is an Arduino sketch that I use to control my central heating boiler. 
@@ -29,6 +29,8 @@ Key points are:
 
 - the system state and target temperature can be controlled over the wireless serial link using the LLAP protocol.  Both these, the current room temp and the relay state (which may not match the system on/off state when the room is up to temp) can be queried.  A list of LLAP commands is below.
 
+- when first burned to an arduino, the LLAP device name is '--'.  This should be changed soon after to something unique to your LLAP network.
+
 Files:
 
 - paul_thermostat.ino.  This is the Arduino sketch.  It is in the correct format for development at the command line using avrdude in Linux.  It may work with other methods and I'd guess it'll be importable into the Arduino IDE if you use that.
@@ -48,5 +50,5 @@ aTSRELA-----	| query relay state	| aTSRELA0---
 aTSSTAT0----	| turn heating off	| echos the request
 aTSSTAT1----	| turn heating on	| echos the request
 aTSTTMP23.50	| set target temp	| echos the request
-
+aTSCHDEVIDGG	| change device id 	| echos the request
 
