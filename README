@@ -1,0 +1,52 @@
+paul_thermostat
+-----
+
+2014-01-28 Paul Hayes
+
+-----
+
+This is an Arduino sketch that I use to control my central heating boiler. 
+
+The circuit and sketch started life as the heating controller example from Simon Monk's excellent book "30 Arduino Projects for the Evil Genius".  
+
+It has changed fair significantly since then.
+
+Key points are:
+
+- an Arduino Duemilanove compatible board but should work on any similar ones (just check the pin outs)
+
+- wireless serial communication using XRF boards from Ciseco
+
+- Arduino reads from a thermistor and activates a relay when the temperature drops below a set level
+
+- the system has overall on & off states meaning the relay will never be turned on (i.e. your central heating is turned off)
+
+- a 2-line LCD display (HD44780 compatible) is used to display the above state along with current room temp and the "target" temp the relay will be activated around
+
+- a rotary encoder and combined push switch is the only manual control.  Push to turn the system state on/off and turn to adjust the "target" temperature
+
+- The LCD is backlit, the light comes on with any user input and turns off after a timeout
+
+- the system state and target temperature can be controlled over the wireless serial link using the LLAP protocol.  Both these, the current room temp and the relay state (which may not match the system on/off state when the room is up to temp) can be queried.  A list of LLAP commands is below.
+
+Files:
+
+- paul_thermostat.ino.  This is the Arduino sketch.  It is in the correct format for development at the command line using avrdude in Linux.  It may work with other methods and I'd guess it'll be importable into the Arduino IDE if you use that.
+
+- Makefile.  This is the make file for avrdude.  "make" will compile the sketch, "make upload" will upload it to a connected Arduino.  Check the serial port setting inside the Makefile.
+
+- circuits folder.  This contains a half finished fritzing diagram of the circuit I use.  I think this is quite out of date, I did my design by hand on paper. The photos show my early prototype on breadboard, this was before adding the XRF wireless serial.
+
+LLAP commands:
+
+Command		| Description		| Typical response
+-----------------------------------------------------------
+aTSRTMP-----  	| query the room temp	| aTSRTMP20.54
+aTSTTMP-----	| query the target temp	| aTSTMP22.00
+aTSSTAT-----	| query heating state	| aTSSTAT1---
+aTSRELA-----	| query relay state	| aTSRELA0---
+aTSSTAT0----	| turn heating off	| echos the request
+aTSSTAT1----	| turn heating on	| echos the request
+aTSTTMP23.50	| set target temp	| echos the request
+
+
