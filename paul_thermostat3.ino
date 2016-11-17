@@ -1,11 +1,13 @@
 // Pauls Thermostat version 3
 // changed to use llap
 #include <LiquidCrystal.h>
+#include <EEPROM.h>
 #include <Arduino.h>
+#include <string.h>
 
 const int beta = 4090; // from thermistor datasheet
 const int resistance = 33;
-const char llapId[] = "TS";
+char llapId[3];
 
 // LiquidCrystal display with:
 // rs on pin 12
@@ -46,8 +48,22 @@ float adjustUnits(float temp);
 void readLlap();
 void readSerial();
 void ftoa(char fstr[80], float num);
+void setName(char name[3], int save);
+void sendLlap(char msg[], int count);
+void sendLlap(char msg[]);
 
 void setup() {
+  // load llap id, initialise to -- if never set
+  char idTmp[2];
+  idTmp[0] = EEPROM.read(0);
+  idTmp[1] = EEPROM.read(1);
+  idTmp[2] = '\0';
+  if (!strcmp(idTmp, "\xff\xff")) {
+    setName("--", 1);
+  } else {
+    setName(idTmp, 0);
+  }
+
   lcd.begin(2, 20);
   //  pinMode(ledPin, OUTPUT);
   pinMode(relayPin, OUTPUT);
@@ -62,6 +78,8 @@ void setup() {
   lcd.clear();
   Serial.begin(9600);
   //inData[0] = '\0';
+  delay(500);
+  sendLlap("STARTING", 5);
 }
 
 void loop() {
@@ -177,8 +195,7 @@ float adjustUnits(float temp) {
 */
 void serialEvent() {
   char llapMsg[13];
-  // this is default but just to make sure
-  Serial.setTimeout(1000);
+  char buffer[10];
   // try and read 12 bytes, give up after one second
   // presumably dont need serial.available in this function
   int byteCount = Serial.readBytes(llapMsg, 12);
@@ -219,20 +236,29 @@ void serialEvent() {
   // whenever sending an llap message we must ensure it is always exactly 12 bytes
   if (strstr(msg, "RTMP-----")) {
     // reply with the temp
-    char buffer[10];
+    buffer[10];
     ftoa(buffer, measuredTemp);
     strcat(buffer, "----");
-    buffer[5] = '\0';    
-    Serial.print("aTSRTMP");
-    Serial.print(buffer);
+    buffer[5] = '\0';
+    char smsg[] = "RTMP";
+    strcat(smsg, buffer);
+    sendLlap(smsg, 1);
+    //Serial.print("aTSRTMP");
+    //Serial.print(buffer);
   }
   else if (strstr(msg, "TTMP")) {
     // set or reply with target temp
     char msgTail[6] = {msg[4], msg[5], msg[6], msg[7], msg[8], '\0'};
     if (strstr(msgTail, "-----")) {
       // return the target temp
-      Serial.print("aTSTTMP");
-      Serial.print(setTemp);
+      char smsg[] = "TTMP";
+      ftoa(buffer, setTemp);
+      strcat(buffer, "----");
+      buffer[5] = '\0';
+      strcat(smsg, buffer);
+      sendLlap(smsg);
+      //Serial.print("aTSTTMP");
+      //Serial.print(setTemp);
     }
     else {
       // set the target temp
@@ -243,8 +269,15 @@ void serialEvent() {
       if ((tempTemp > 10.0) && (tempTemp < 30.0)) {
       	 setTemp = tempTemp;
       }
-      Serial.print("aTSTTMP");
-      Serial.print(setTemp);
+      buffer[10];
+      ftoa(buffer, setTemp);
+      strcat(buffer, "----");
+      buffer[5] = '\0';
+      char smsg[] = "TTMP";
+      strcat(smsg, buffer);
+      sendLlap(smsg);
+      //Serial.print("aTSTTMP");
+      //Serial.print(setTemp);
     }
   }
   else if (strstr(msg, "STAT")) {
@@ -252,52 +285,122 @@ void serialEvent() {
     char msgTail[6] = {msg[4], msg[5], msg[6], msg[7], msg[8], '\0'};
     if (strstr(msgTail, "-----")) {
       // return the state of the thermostat
-      Serial.print("aTSSTAT");
+      //Serial.print("aTSSTAT");
       if (is_off) {
-	Serial.print(0);
+	//Serial.print(0);
+	sendLlap("STAT0");
       } 
       else if (!is_off) {
-	Serial.print(1);
+	//Serial.print(1);
+	sendLlap("STAT1");
       }
-      Serial.print("----");
+      //Serial.print("----");
     }
     else if (strstr(msgTail, "1----")) {
       // turn stat on
       is_off = false;
-      Serial.print("aTSSTAT1----");
+      //Serial.print("aTSSTAT1----");
+      sendLlap("STAT1");
     }
     else if (strstr(msgTail, "0----")) {
       // turn stat off
       is_off = true;
-      Serial.print("aTSSTAT0----");
+      //Serial.print("aTSSTAT0----");
+      sendLlap("STAT0");
     }
   }
   else if (strstr(msg, "RELA-----")) {
     // reply with relay state
-    Serial.print("aTSRELA");
+    //Serial.print("aTSRELA");
     if (heatingOn) {
-      Serial.print("1----");
+      //Serial.print("1----");
+      sendLlap("RELA1");
     }
     else if (!heatingOn) {
-      Serial.print("0----");
+      //Serial.print("0----");
+      sendLlap("RELA0");
     }
+  }
+  else if (strstr(msg, "CHDEVID")) {
+    // change the device id
+    char newId[3] = {msg[7], msg[8], '\0'};
+    char smsg[] = "CHDEVID";
+    strcat(smsg, newId);
+    sendLlap(smsg);
+    setName(newId, 1);
   }
 }
 
-void ftoa(char fstr[80], float num) {
+
+void sendLlap(char msg[9]) {
+  sendLlap(msg, 1);
+}
+
+void sendLlap(char msg[9], int count) {
+  int i;
+  // this is default but just to make sure
+  Serial.setTimeout(1000);
+  // send llap message msg, count times
+  char buffer[50];
+  //strcpy(buffer, "a");
+  strcpy(buffer, "a");
+  strcat(buffer, llapId);
+  strcat(buffer, msg);
+  strcat(buffer, "---------"); 
+  buffer[12] = '\0';
+  for (i=0; i<count; i++) {
+    Serial.print(buffer);
+  }
+}
+
+
+ void setName(char name[3], int save) {
+  // set llap name and save to eeprom
+  llapId[0] = name[0];
+  llapId[1] = name[1];
+  llapId[2] = '\0';
+  if (save == 1) {
+    EEPROM.write(0, llapId[0]);
+    EEPROM.write(1, llapId[1]);
+  }
+}
+
+
+// this walks through the digits of the float, converting each one to ascii and storing in the char array
+void ftoa(char fstr[6], float num) {
+  // base 10 logarithm converted to an int tells you how many digits in the integer part of num
   int m = log10(num);
   int digit;
-  float tolerance = .0001f;
+  int count = 0;
+  float tolerance = .01f;
 
   while (num > 0 + tolerance) {
+    // weight is the power of the digit we are about to look at
     float weight = pow(10.0f, m);
+    // digit is the next digit in the number to convert
     digit = floor(num / weight);
+    // remove this digit from the right place of the number
     num -= (digit*weight);
+    // array to pointer and then iterate to the next location.  Convert digit to ascii
     *(fstr++)= '0' + digit;
     if (m == 0)
+      // when m is 0 at this point, the next digit will be after the decimal point
       *(fstr++) = '.';
+    // move on to the next digit
     m--;
+    count++;
   }
+  // pad with zeros if neccessary
+  while (count<4) {
+    printf("count: %d\n", count);
+    *(fstr++) = '0';
+    count++;
+    if (count == 2)
+      *(fstr++) = '.';
+  }
+
+  // null terminate
   *(fstr) = '\0';
+  
 }
 
